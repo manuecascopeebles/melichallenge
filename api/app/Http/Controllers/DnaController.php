@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Laravel\Lumen\Routing\Controller as BaseController;
 use App\models\Dna;
-use Carbon\Carbon;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -19,9 +18,13 @@ class DnaController extends BaseController
 	public $response;
 	public $statusResponse;
 	public $dnaMatchs;
+	public $dnaAsArray;
+	public $horizontal;
+	public $oblique;
+	public $verticalMatchs;
 
 	/**
-	 * [__construct description]
+	 * __construct
 	 */
 	public function __construct(){
 		$this->response = [
@@ -29,11 +32,17 @@ class DnaController extends BaseController
 		];
 		$this->statusResponse = Response::HTTP_BAD_REQUEST;
 		$this->dnaMatchs = 0;
+		$this->dnaAsArray = [];
+		$this->horizontal = 1;
+		$this->oblique = 1;
+		$this->verticalMatchs = [];
+
+
 	}
 	/**
 	 * [mutant description]
-	 * @param  Request $request [description]
-	 * @return [json]           [description]
+	 * @param  Request $request 
+	 * @return [json]           
 	 */
  		public function isMutant(Request $request){
  			try{
@@ -58,36 +67,36 @@ class DnaController extends BaseController
 						}
 					}
 				}else{
-					$this->response['messages'][] = 'Parametro dna no enviado en el request.';
+					$this->response['messages'][] = 'DNA param not found on request.';
 				}
 				return response()->json($this->response, $this->statusResponse);
  			}catch(\Exception $e){
-				$this->response['messages'][] = 'Ocurrió un error, vuelva a intentarlo.' . $e->getMessage();
+				$this->response['messages'][] = 'Something went wrong.Error: ' . $e->getMessage();
 				$this->statusResponse = Response::HTTP_INTERNAL_SERVER_ERROR;
  					return response()->json($this->response, $this->statusResponse);
  			}
  		}
 
 	/**
-	 * [checkValidDnaComposition checks if dna composition is valid to proceed]
+	 * checkValidDnaComposition checks if dna composition is valid to proceed
 	 * @param  [array] $dnaArray [dna array string]
 	 * @return [boolean]           [result]
 	 */
 		protected function checkValidDnaComposition($dnaArray){
 			$validDnaComposition = true;
 			if(!is_array($dnaArray)){
-				$this->response['message'][] = 'El parametro dna debe ser un array.';
+				$this->response['message'][] = 'DNA param must be an array.';
 				$validDnaComposition = false;
 			}else{
 				if(count($dnaArray) != 6){
-					$this->response['message'][] = 'El parametro dna debe ser un array de 6 cadenas.';
+					$this->response['message'][] = 'DNA param must be an array of 6 strings each value.';
 					$validDnaComposition = false;
 				}else{
 					$dnaStringControl = array_map(function($string){
 						return (strlen($string) == 6)? true : false;
 					}, $dnaArray);
 					if(array_search(false, $dnaStringControl) !== false){
-						$this->response['message'][] = 'Cada cadena de dna debe tener 6 caracteres.';
+						$this->response['message'][] = 'Each DNA string must have 6 characters.';
 						$validDnaComposition = false;
 					}
 				}
@@ -96,68 +105,94 @@ class DnaController extends BaseController
 		}
 
 	/**
-	 * [processDna description]
-	 * @param  [array] $dna [description]
-	 * @return [void]      [description]
+	 * processDna processs dna array to find matches vertically, horizontally or obliquely
+	 * @param  [array] $dna [$dna array]
+	 * @return [void]      
 	 */
 		protected function processDna(Array $dna){
-			// NO te olvides que oblicuo puede ser para la derecha tmabien!!!!
-			$oblique = 1;
-			$horizontal = 1;
-			$verticalMatchs = [];
-			$dnaAsArray = $this->dnaToArray($dna);
+			$this->verticalMatchs = [];
+			$this->dnaToArray($dna);
 			for ($i=0; $i < 6; $i++) {
-				$verticalMatchs[$i] = 1;
+				$this->verticalMatchs[$i] = 1;
 				for($m=0; $m < 6;$m++){
-					if(!isset($verticalMatchs[$m])) $verticalMatchs[$m] = 1;
-
-					if($m<5){
-						if($dnaAsArray[$i][$m] == $dnaAsArray[$i][$m + 1]){
-							$horizontal += 1;
-							if($horizontal == 4) $this->dnaMatchs += 1;
-						}else{
-							$horizontal = 1;
-						}
-					}
-
-					if($i > 0){
-						if($dnaAsArray[$i -1][$m] == $dnaAsArray[$i][$m]){
-							$verticalMatchs[$m] += 1;
-							if($verticalMatchs[$m] == 4) $this->dnaMatchs += 1;
-						}else{
-							$verticalMatchs[$m] = 1;
-						}
-					}
+					if(!isset($this->verticalMatchs[$m])) $this->verticalMatchs[$m] = 1;
+					if($m<5) $this->verifyHorizontal($i,$m);
+					if($i > 0) $this->verifyVertical($i,$m);
 				}
-				if($i > 0){
-					if($dnaAsArray[$i -1][$i-1] == $dnaAsArray[$i][$i]){
-						$oblique += 1;
-						if($oblique == 4) $this->dnaMatchs += 1;
-					}else{
-						$oblique = 1;
-					}
-				}
+				if($i > 0) $this->verifyOblique($i);
 			}
 
 		}
 
 		/**
-		 * [dnaToArray description]
-		 * @param  [array] $dna [description]
-		 * @return [array]      [description]
+		 * dnaToArray converts strings inside arrya into array
+		 * @param  [array] $dna [$dna array strings]
+		 * @return [array]      [$dna astrings to array]
 		 */
 		protected function dnaToArray(Array $dna){
 
-			return array_map(function($stringDna){
+			$this->dnaAsArray = array_map(function($stringDna){
 				return str_split($stringDna);
 			},$dna);
 		}
 
+		/**
+		 * verifyHorizontal verify if dna sequence matchs horizontally
+		 *
+		 * @param [integer] $i
+		 * @param [integer] $m
+		 * @return void
+		 */
+		protected function verifyHorizontal($i,$m){
+
+			if($this->dnaAsArray[$i][$m] == $this->dnaAsArray[$i][$m + 1]){
+				$this->horizontal += 1;
+				if($this->horizontal == 4){
+					$this->dnaMatchs += 1;
+				} 
+			}else{
+				$this->horizontal = 1;
+			}
+		}
 
 		/**
-		 * [stats description]
-		 * @param  Request $request [description]
-		 * @return [json]           [description]
+		 * verifyVertical verify if dna sequence matchs vertically
+		 *
+		 * @param [integer] $i
+		 * @param [integer] $m
+		 * @return void
+		 */
+		protected function verifyVertical($i,$m){
+
+			if($this->dnaAsArray[$i -1][$m] == $this->dnaAsArray[$i][$m]){
+				$this->verticalMatchs[$m] += 1;
+				if($this->verticalMatchs[$m] == 4) $this->dnaMatchs += 1;
+			}else{
+				$this->verticalMatchs[$m] = 1;
+			}
+		}
+
+		/**
+		 * verifyOblique verify if dna sequence matchs obliquely
+		 *
+		 * @param [integer] $i
+		 * @return void
+		 */
+		protected function verifyOblique($i){
+
+			if($this->dnaAsArray[$i -1][$i-1] == $this->dnaAsArray[$i][$i]){
+				$this->oblique += 1;
+				if($this->oblique == 4) $this->dnaMatchs += 1;
+			}else{
+				$this->oblique = 1;
+			}
+		}
+
+
+		/**
+		 * stats returns statistics of dna samples
+		 * @param  Request $request 
+		 * @return json        
 		 */
 			public function stats(Request $request){
 
@@ -169,15 +204,15 @@ class DnaController extends BaseController
 
 					return response()->json($stats, Response::HTTP_OK);
 				}catch(\Exception $e){
-						return response()->json('Ocurrió un error, vuelva a intentarlo.' . $e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
+						return response()->json('Something went wrong.Error: ' . $e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
 				}
 			}
 
 		/**
-		 * [ratio description]
-		 * @param  [number] $a [description]
-		 * @param  [number] $b [description]
-		 * @return [float]    [description]
+		 * ratio returns the ratio between mutant and human dna
+		 * @param  [integer] $a [quantity of mutant DNA]
+		 * @param  [integer] $b [quantity of human DNA]
+		 * @return [float]    [ration between mutnat dna and human dna]
 		 */
 			public function ratio($a, $b) {
 					 $_a = abs($a);
