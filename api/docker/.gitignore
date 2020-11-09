@@ -1,0 +1,15 @@
+/local-mysql-datadir/
+/local-mysql-datadir-b/
+/xdebug3.ini
+/xdebug.ini
+/docker-compose_eric.yml
+/swops-local.yml
+/swops-local-slave.yml
+/swops_s3_access_key_id.txt
+/swops_s3_secret_access_key.txt
+/local-mysql-datadir-slave/
+/swops_s3_access_key_id_prod.txt
+/swops_s3_secret_access_key_prod.txt
+/swops_dev_mysql_uri.txt
+/swops_dev_mysql_uri_local.txt
+/configuration.json

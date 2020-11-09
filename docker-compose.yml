@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+  api:
+    image: manuelcascopeebles/melichallenge:latest
+    ports:
+      - "80:80"
+    environment:
+      MIGRATION_RUN: not_execute
+      ENVIRONMENT_MODE: Production
+      INSTALL_XDEBUG: not_execute
+      FIRST_UP: execute
+      DB_HOST: mutants.cgwwlmwtwhaq.us-west-2.rds.amazonaws.com
+      DB_DATABASE: mutants
+      DB_USERNAME: admin
+      DB_PASSWORD: M4steT7EXEgatSrq3Po
+      API_HOST: localhost
+    logging:
+      driver: awslogs
+      options: 
+        awslogs-group: ec2-tutorial
+        awslogs-region: us-west-2
+        awslogs-stream-prefix: api
+
+  migrations:
+      image: manuelcascopeebles/melichallenge:latest
+      environment:
+        MIGRATION_RUN: not_execute
+        ENVIRONMENT_MODE: Production
+        INSTALL_XDEBUG: not_execute
+        FIRST_UP: execute
+        DB_HOST: mutants.cgwwlmwtwhaq.us-west-2.rds.amazonaws.com
+        DB_DATABASE: mutants
+        DB_USERNAME: admin
+        DB_PASSWORD: M4steT7EXEgatSrq3Po
+        API_HOST: localhost
+      logging:
+        driver: awslogs
+        options: 
+          awslogs-group: ec2-tutorial
+          awslogs-region: us-west-2
+          awslogs-stream-prefix: migrations
