@@ -38,8 +38,7 @@ curl -H 'Content-Type: application/json' --location --request POST 'localhost/ap
 ```
 #### Response Body
 
-```json
-JSON
+```bash
 {
   "messages":['Error messages if exists']
 }
@@ -62,8 +61,7 @@ curl --location --request GET 'localhost/api/stats'
 ```
 
 #### Response Body
-```json
-JSON
+```bash
 {
     "count_mutant_dna": DNA mutant count on db(number),
     "count_human_dna": DNA human count on db(number),
